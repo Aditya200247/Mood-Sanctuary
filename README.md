@@ -1,398 +1,161 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+🌿 Mood Sanctuary (Prototype)
 
-import Lottie from 'react-lottie-player'
+Mood Sanctuary is a calming, interactive web app designed to help users reflect, focus, and improve emotional well-being.
+It combines mood tracking, journaling, focus timer, AI assistant, and a virtual growth garden — all in one soothing interface.
 
+This is a prototype built using React, Framer Motion, and Tailwind CSS, with optional backend support for real-time script execution.
 
-const sampleLottie = null 
+🚀 Features
+🧘 Mood Detection & Visualization
 
-const THEMES = {
-  neutral: { bg: 'bg-gradient-to-br from-gray-50 to-white', color: 'text-gray-800' },
-  calm: { bg: 'bg-gradient-to-br from-blue-50 to-indigo-50', color: 'text-blue-900' },
-  happy: { bg: 'bg-gradient-to-br from-yellow-50 to-pink-50', color: 'text-pink-900' },
-  stressed: { bg: 'bg-gradient-to-br from-green-50 to-emerald-50', color: 'text-green-900' },
-}
+Automatically detects mood from your journal entries.
 
-export default function App() {
-  return (
-    <div>
-      <div style={{ padding: 20 }}>
-        <h1 className="text-2xl font-bold mb-4">Mood Sanctuary (Prototype)</h1>
-        <ScriptRunner />
-      </div>
+Tap the Mood Ring to manually select your emotional state.
 
-      <MoodSanctuaryUI />
-    </div>
-  )
-}
+The theme background adapts to your mood in real time.
 
+📓 Journaling
 
-function ScriptRunner() {
-  const [output, setOutput] = useState('')
-  const [running, setRunning] = useState(false)
+Write and save short daily reflections.
 
-  const runScript = async () => {
-    try {
-      setOutput('')
-      setRunning(true)
-      const response = await fetch('http://localhost:4000/run-script')
-      if (!response.ok) {
-        setOutput(`Server responded with ${response.status}`)
-        setRunning(false)
-        return
-      }
+Entries are stored in a local state (extendable to a backend).
 
-      const reader = response.body?.getReader()
-      if (!reader) {
-        const text = await response.text()
-        setOutput(text)
-        setRunning(false)
-        return
-      }
+Each entry keeps a snapshot of your mood at the time of writing.
 
-      const decoder = new TextDecoder()
-      let done = false
-      while (!done) {
-        const { value, done: d } = await reader.read()
-        done = d
-        if (value) {
-          // Use function updater to avoid stale closures
-          const chunk = decoder.decode(value, { stream: true })
-          setOutput((prev) => prev + chunk)
-        }
-      }
-      setRunning(false)
-    } catch (err) {
-      setOutput((p) => p + `\n[error] ${err.message}`) 
-      setRunning(false)
-    }
-  }
+⏳ Focus Mode (Pomodoro Timer)
 
-  return (
-    <div className="mb-6">
-      <div className="flex gap-2 items-center">
-        <button
-          onClick={runScript}
-          disabled={running}
-          className={`px-4 py-2 rounded ${running ? 'bg-gray-300' : 'bg-blue-500 text-white'}`}
-        >
-          {running ? 'Running...' : 'Run Script'}
-        </button>
-        <div className="text-sm opacity-80">Streams stdout from server (prototype)</div>
-      </div>
+Start 25- or 50-minute focus sessions.
 
-      <pre className="mt-3 p-3 bg-black text-white rounded max-h-48 overflow-auto">{output || "(no output yet)"}</pre>
-    </div>
-  )
-}
+When a session ends, your garden grows 🌱
+
+Tracks focus streaks and engagement points.
+
+🌼 Growth Garden
+
+Watch your digital garden flourish as you stay consistent.
+
+Encourages mindfulness and productivity.
+
+💬 AI Assistant (Prototype)
+
+A space to chat with an empathetic AI listener.
+
+Currently mocked with placeholder messages — easily connectable to OpenAI API or custom backend.
+
+🧩 Script Runner (Backend Prototype)
+
+Runs a test script through http://localhost:4000/run-script and streams live console output.
+
+Demonstrates backend–frontend integration with server-sent streaming.
+
+🛠️ Tech Stack
+Layer	Technology
+Frontend	React 18, Tailwind CSS, Framer Motion
+Animation	Lottie Player
+Backend (optional)	Node.js / Express (for /run-script endpoint)
+State Management	React Hooks
+Prototype AI	Placeholder (can integrate OpenAI or local LLM)
+📂 Project Structure
+src/
+ ├── App.jsx                # Main entry point
+ ├── components/
+ │    ├── ScriptRunner.jsx  # Backend streaming test
+ │    ├── MoodSanctuaryUI.jsx
+ │    ├── MoodRing.jsx
+ │    ├── Garden.jsx
+ │    └── Card.jsx
+ ├── assets/
+ │    └── sampleLottie.json # (optional animation file)
+ ├── index.css
+ └── index.js
+
+⚙️ Installation & Setup
+
+Clone the repository
+
+git clone https://github.com/<your-username>/mood-sanctuary.git
+cd mood-sanctuary
 
 
-export function MoodSanctuaryUI() {
-  const [mood, setMood] = useState('neutral')
-  const [journal, setJournal] = useState('')
-  const [entries, setEntries] = useState([])
-  const [showChat, setShowChat] = useState(false)
-  const [focusSeconds, setFocusSeconds] = useState(25 * 60)
-  const focusTimer = useRef(null)
-  const [isFocusing, setIsFocusing] = useState(false)
-  const [gardenScore, setGardenScore] = useState(0)
+Install dependencies
 
-  useEffect(() => {
-   
-    const text = journal.toLowerCase()
-    if (text.includes('anx') || text.includes('nerv')) setMood('stressed')
-    else if (text.includes('happy') || text.includes('good') || text.includes('yay')) setMood('happy')
-    else if (text.includes('calm') || text.includes('relax')) setMood('calm')
-    else setMood('neutral')
-  }, [journal])
+npm install
 
-  useEffect(() => {
-    if (isFocusing) {
-      focusTimer.current = setInterval(() => {
-        setFocusSeconds((s) => {
-          if (s <= 1) {
-            clearInterval(focusTimer.current)
-            setIsFocusing(false)
-            setGardenScore((g) => g + 1)
-            return 0
-          }
-          return s - 1
-        })
-      }, 1000)
-    }
-    return () => clearInterval(focusTimer.current)
-  }, [isFocusing])
 
-  function startFocus(minutes = 25) {
-    setFocusSeconds(minutes * 60)
-    setIsFocusing(true)
-  }
+Run the frontend
 
-  function stopFocus() {
-    clearInterval(focusTimer.current)
-    setIsFocusing(false)
-  }
+npm run dev
 
-  function saveJournal() {
-    if (journal.trim() === '') return
-    const entry = { id: Date.now(), text: journal.trim(), mood }
-    setEntries((e) => [entry, ...e])
-    setJournal('')
-    setGardenScore((g) => g + 0.5)
-  }
 
-  function formatTime(seconds) {
-    const m = Math.floor(seconds / 60)
-    const s = seconds % 60
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-  }
+(For CRA-based setup, use npm start.)
 
-  const theme = THEMES[mood] || THEMES.neutral
+Optional: Start backend (for ScriptRunner)
 
-  return (
-    <div className={`${theme.bg} min-h-screen p-6 ${theme.color} transition-colors duration-500`}>
-      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left column: Mood Ring + Garden */}
-        <aside className="col-span-1 flex flex-col gap-6">
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h2 className="text-xl font-semibold">Mood Ring</h2>
-            <p className="text-sm opacity-80">Your current emotional snapshot — tap to adjust.</p>
+cd server
+node server.js
 
-            <div className="mt-4 flex items-center gap-4">
-              <MoodRing mood={mood} setMood={setMood} />
-              <div>
-                <div className="font-medium">{mood.toUpperCase()}</div>
-                <div className="text-sm opacity-80">Engagement: {gardenScore.toFixed(1)}</div>
-              </div>
-            </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <button
-                className="py-2 rounded-xl bg-blue-50"
-                onClick={() => setShowChat((s) => !s)}
-              >
-                Open AI Assistant
-              </button>
-              <button
-                className="py-2 rounded-xl bg-green-50"
-                onClick={() => startFocus(25)}
-              >
-                Start Focus
-              </button>
-            </div>
-          </div>
+Ensure it listens at http://localhost:4000/run-script.
 
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h3 className="font-semibold">Growth Garden</h3>
-            <p className="text-sm opacity-80">Your garden grows as you practice self-care.</p>
-            <div className="mt-4">
-              <Garden score={gardenScore} />
-            </div>
-          </div>
-        </aside>
+🧠 How It Works
 
-        {/* Middle column: Cards & Journal */}
-        <main className="col-span-2 md:col-span-1 lg:col-span-1 flex flex-col gap-6">
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h2 className="text-xl font-semibold">Today</h2>
-            <div className="mt-4 flex flex-col gap-3">
-              <Card title="Breathing Break" desc="3-min guided breathing" onClick={() => alert('Play breathing guide (prototype)')} />
-              <Card title="Journaling" desc="Write about your day" onClick={() => document.getElementById('journal')?.focus()} />
-              <Card title="Peer Support" desc="Anonymous forum" onClick={() => alert('Open peer support (prototype)')} />
-            </div>
-          </div>
+Mood Analysis: Simple keyword-based detection (e.g., “happy”, “calm”, “anxious”).
 
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h3 className="font-semibold">Journal</h3>
-            <textarea
-              id="journal"
-              className="mt-3 w-full rounded-xl p-3 border border-gray-200"
-              rows={5}
-              value={journal}
-              onChange={(e) => setJournal(e.target.value)}
-              placeholder="How are you feeling? Write anything..."
-            />
-            <div className="mt-3 flex gap-2">
-              <button className="px-4 py-2 rounded-lg bg-indigo-50" onClick={saveJournal}>Save</button>
-              <button className="px-4 py-2 rounded-lg bg-gray-100" onClick={() => setJournal('')}>Clear</button>
-            </div>
+Dynamic Theming: Background gradients and text colors adapt to the detected mood.
 
-            {entries.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-medium">Recent Entries</h4>
-                <ul className="mt-2 space-y-2 max-h-48 overflow-y-auto">
-                  {entries.map((en) => (
-                    <li key={en.id} className="p-3 rounded-lg bg-white/50 border">
-                      <div className="text-sm opacity-80">{en.mood.toUpperCase()}</div>
-                      <div className="mt-1">{en.text}</div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
+Garden Growth: Incremental score system (gardenScore) rewards journaling and focus completion.
 
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h3 className="font-semibold">Focus Mode</h3>
-            <div className="mt-4 flex items-center gap-4">
-              <div className="text-3xl font-mono">{formatTime(focusSeconds)}</div>
-              <div className="flex flex-col gap-2">
-                {!isFocusing ? (
-                  <div className="flex gap-2">
-                    <button className="px-3 py-2 rounded-lg bg-blue-50" onClick={() => startFocus(25)}>25</button>
-                    <button className="px-3 py-2 rounded-lg bg-blue-50" onClick={() => startFocus(50)}>50</button>
-                  </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <button className="px-3 py-2 rounded-lg bg-red-50" onClick={stopFocus}>Stop</button>
-                  </div>
-                )}
-                <div className="text-sm opacity-80">Streak: {Math.floor(gardenScore)}</div>
-              </div>
-            </div>
-          </div>
-        </main>
+Focus Mode: Uses a countdown timer with React hooks and side effects.
 
-        {/* Right column: Assistant Chat & Emergency */}
-        <div className="col-span-1 md:col-span-1 lg:col-span-1 flex flex-col gap-6">
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md h-full flex flex-col">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">AI Assistant</h3>
-              <div className="text-sm opacity-80">{showChat ? 'Online' : 'Offline'}</div>
-            </div>
+Smooth Animations: Framer Motion adds soft UI transitions for mood shifts and plant growth.
 
-            <div className="mt-4 flex-1">
-              <AnimatePresence>
-                {showChat ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="space-y-3 h-64 overflow-auto"
-                  >
-                    <div className="p-3 rounded-lg bg-gray-50">Hi, I'm here to listen. What's on your mind?</div>
-                    <div className="p-3 rounded-lg bg-gray-50">(AI chat messages would appear here in a real build.)</div>
-                  </motion.div>
-                ) : (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-64 flex items-center justify-center opacity-80">
-                    Open the assistant to chat.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+💡 Future Roadmap
 
-            <div className="mt-4">
-              <div className="flex gap-2">
-                <button className="flex-1 py-2 rounded-lg bg-indigo-50" onClick={() => setShowChat(true)}>Open Chat</button>
-                <button className="flex-1 py-2 rounded-lg bg-red-100" onClick={() => alert('Emergency: Call campus counselor (prototype)')}>Emergency</button>
-              </div>
-            </div>
-          </div>
+ Persistent data storage (LocalStorage / Firebase / MongoDB)
 
-          <div className="rounded-2xl p-6 shadow-lg bg-white/60 backdrop-blur-md">
-            <h3 className="font-semibold">Wellness Tips</h3>
-            <ul className="mt-3 space-y-2 text-sm opacity-90">
-              <li>• Take a 3-min breathing break every hour.</li>
-              <li>• Keep a short nightly journal (even 2 lines).</li>
-              <li>• Reach out to a friend once a week.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+ Real AI chat integration (OpenAI API or custom model)
 
-      {/* Floating Emergency Button */}
-      <div className="fixed bottom-6 right-6">
-        <button
-          onClick={() => alert('Emergency: contacting support (prototype)')}
-          className="rounded-full w-16 h-16 shadow-2xl bg-gradient-to-br from-red-400 to-pink-500 text-white text-sm font-bold"
-        >
-          SOS
-        </button>
-      </div>
-    </div>
-  )
-}
+ Sound therapy & breathing animations
 
-/* --- Reusable small components --- */
+ Gamified self-care streaks
 
-function Card({ title, desc, onClick = () => {} }) {
-  return (
-    <motion.button
-      whileHover={{ y: -4 }}
-      className="w-full text-left p-4 rounded-xl shadow-sm bg-white/70 flex justify-between items-center"
-      onClick={onClick}
-    >
-      <div>
-        <div className="font-medium">{title}</div>
-        <div className="text-sm opacity-80">{desc}</div>
-      </div>
-      <div className="text-2xl">›</div>
-    </motion.button>
-  )
-}
+ User authentication system
 
-function MoodRing({ mood, setMood }) {
-  const options = ['calm', 'happy', 'neutral', 'stressed']
-  return (
-    <div className="flex items-center gap-3">
-      <svg width="96" height="96" viewBox="0 0 96 96" className="rounded-full shadow-inner">
-        <defs>
-          <radialGradient id="g1">
-            <stop offset="0%" stopColor="#fff" />
-            <stop offset="100%" stopColor="#000" stopOpacity="0.1" />
-          </radialGradient>
-        </defs>
-        <circle cx="48" cy="48" r="44" fill="url(#g1)" stroke="#e6e6e6" strokeWidth="1" />
-        {/* color wheel */}
-        {options.map((opt, i) => {
-          const angle = (i / options.length) * Math.PI * 2
-          const x = 48 + Math.cos(angle) * 28
-          const y = 48 + Math.sin(angle) * 28
-          const color = opt === 'calm' ? '#60a5fa' : opt === 'happy' ? '#f59e0b' : opt === 'neutral' ? '#94a3b8' : '#34d399'
-          return (
-            <circle
-              key={opt}
-              cx={x}
-              cy={y}
-              r={10}
-              fill={color}
-              onClick={() => setMood(opt)}
-              style={{ cursor: 'pointer' }}
-            />
-          )
-        })}
-      </svg>
-    </div>
-  )
-}
+ Mobile-responsive PWA version
 
-function Garden({ score = 0 }) {
-  const plants = []
-  const total = Math.min(6, Math.floor(score))
-  for (let i = 0; i < total; i++) plants.push(i)
+🤝 Contributing
 
-  return (
-    <div className="flex gap-2 items-end h-24">
-      {plants.length === 0 ? (
-        <div className="text-sm opacity-70">No growth yet — complete small tasks to grow your garden.</div>
-      ) : (
-        plants.map((p) => (
-          <motion.div
-            key={p}
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="w-8"
-            transition={{ delay: p * 0.12 }}
-          >
-            <svg viewBox="0 0 24 48" className="w-full h-24">
-              <rect x="8" y="28" width="8" height="20" rx="2" fill="#7c3aed" />
-              <circle cx="12" cy="20" r="10" fill="#34d399" />
-            </svg>
-          </motion.div>
-        ))
-      )}
-    </div>
-  )
-}
+Contributions are welcome!
+See CONTRIBUTING.md
+ for details.
 
-// End of file
+Fork the project
+
+Create your feature branch
+
+git checkout -b feature/YourFeature
+
+
+Commit your changes
+
+git commit -m "Add YourFeature"
+
+
+Push to your branch
+
+git push origin feature/YourFeature
+
+
+Open a Pull Request
+
+🧾 License
+
+This project is released under the MIT License — you’re free to use, modify, and distribute it.
+
+✨ Author
+
+Aditya Kumar Thakur
+💻 BTech AI & ML Student | Passionate about Human-Centered AI
+
+📬 GitHub
+ • LinkedIn
